@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedBlack", "RedBlack\RedBlack.csproj", "{B1D71C8F-7912-40D7-BBB6-2E7F1230D04F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedBlackTest", "RedBlackTest\RedBlackTest.csproj", "{8F0CF163-150C-4212-BF31-A3E52406A8DE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B1D71C8F-7912-40D7-BBB6-2E7F1230D04F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1D71C8F-7912-40D7-BBB6-2E7F1230D04F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1D71C8F-7912-40D7-BBB6-2E7F1230D04F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1D71C8F-7912-40D7-BBB6-2E7F1230D04F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F0CF163-150C-4212-BF31-A3E52406A8DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F0CF163-150C-4212-BF31-A3E52406A8DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F0CF163-150C-4212-BF31-A3E52406A8DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F0CF163-150C-4212-BF31-A3E52406A8DE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
