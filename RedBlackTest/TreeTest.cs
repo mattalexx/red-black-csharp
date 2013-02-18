@@ -26,30 +26,12 @@ namespace RedBlackTest
 
         [Test]
         [TestCaseSource("GetTrees")]
-        public void TestNoDuplicates(Tree<Student> tree)
-        {
-        }
-
-        [Test]
-        [TestCaseSource("GetTrees")]
         public void TestLinks(Tree<Student> tree)
         {
             Node<Student> root = tree.GetRootNode();
 
             Assert.Null(root.Parent);
             TestNodeLinks(root);
-        }
-
-        void TestNodeLinks(Node<Student> node)
-        {
-            foreach (int dir in new[] { 0, 1 })
-            {
-                if (node.children[dir] == null)
-                    continue;
-
-                Assert.AreSame(node, node.children[dir].Parent);
-                TestNodeLinks(node.children[dir]);
-            }
         }
 
         [Test]
@@ -90,27 +72,62 @@ namespace RedBlackTest
         [TestCaseSource("GetLists")]
         public void TestEnumeration(IEnumerable<string> values)
         {
-            Tree<Student> tree = new Tree<Student>();
-            foreach (string value in values)
-                tree.Add(new Student(value));
+            Tree<Student> tree = GetTree(GetStudentList(values));
 
-            List<string> result   = (from student in tree select student.GetObjectStorageKey()).ToList();
+            List<string> result = (from student in tree select student.GetObjectStorageKey()).ToList();
             List<string> expected = (from name in values orderby name select name).Distinct().ToList();
 
             Assert.AreEqual(expected, result);
         }
 
-        protected IEnumerable<Tree<Student>> GetTrees()
+        [Test]
+        [TestCaseSource("GetLists")]
+        public void TestFind(IEnumerable<string> values)
         {
-            var trees = new List<Tree<Student>>();
+            IEnumerable<Student> students = GetStudentList(values);
+            Tree<Student> tree = GetTree(students);
 
-            foreach (IEnumerable<string> list in GetLists())
-                trees.Add(GetTree(list));
-
-            return trees;
+            foreach (Student student in students)
+                Assert.AreSame(student, tree.Find(student.GetObjectStorageKey()));
         }
 
-        protected List<IEnumerable<string>> GetLists()
+        [Test]
+        [TestCaseSource("GetLists")]
+        public void TestFindNonExistent(IEnumerable<string> values)
+        {
+            IEnumerable<Student> students = GetStudentList(values);
+            Tree<Student> tree = GetTree(students);
+
+            string nope = "a";
+            while (values.Contains(nope))
+                nope += "a";
+
+            Assert.IsNull(tree.Find(nope));
+        }
+
+        [Test]
+        [TestCaseSource("GetLists")]
+        [Ignore("Removal's not working yet")]
+        public void TestRemoval(IEnumerable<string> values)
+        {
+            IEnumerable<Student> students = GetStudentList(values);
+            Tree<Student> tree = GetTree(students);
+            List<string> expected = (from value in values orderby value select value).Distinct().ToList();
+            List<string> removeKeys = RandomizePredictably(expected).ToList();
+            List<string> treeList;
+
+            foreach (string removeKey in removeKeys)
+            {
+                tree.Remove(removeKey);
+
+                expected = expected.Where(value => value != removeKey).ToList();
+                treeList = (from student in tree select student.GetObjectStorageKey()).ToList();
+
+                Assert.AreEqual(expected, treeList);
+            }
+        }
+
+        List<IEnumerable<string>> GetLists()
         {
             var lists = new List<IEnumerable<string>>();
 
@@ -119,35 +136,67 @@ namespace RedBlackTest
             lists.Add(new[]{ "C", "A", "B" });
             lists.Add(new[]{ "363", "168", "610", "381", "236", "348", "833" });
             lists.Add(new[]{ "08", "07", "06", "05", "04", "03", "02", "01" });
-
-            var list = GetBigList().ToList();
-            //int keep = 2;
-            //list.RemoveRange(keep, list.Count() - 1);
-            lists.Add(list);
+            lists.Add(GetBigList(1000));
 
             return lists;
         }
 
-        protected IEnumerable<string> GetBigList()
+        IEnumerable<Tree<Student>> GetTrees()
         {
-            var src = new List<Tuple<string, string>>();
+            var trees = new List<Tree<Student>>();
 
-            foreach (int n in from n in Enumerable.Range(1, 1000) select n)
-                src.Add(new Tuple<string, string>(n.ToString(), CalculateMD5Hash(n.ToString())));
+            foreach (IEnumerable<string> list in GetLists())
+                trees.Add(GetTree(GetStudentList(list)));
 
-            return from item in src orderby item.Item2 select item.Item1;
+            return trees;
         }
 
-        protected Tree<Student> GetTree(IEnumerable<string> values)
+        void TestNodeLinks(Node<Student> node)
+        {
+            foreach (int dir in new[] { 0, 1 })
+            {
+                if (node.GetChild(dir) == null)
+                    continue;
+
+                Assert.AreSame(node, node.GetChild(dir).Parent);
+                TestNodeLinks(node.GetChild(dir));
+            }
+        }
+
+        IEnumerable<string> GetBigList(int count)
+        {
+            return (from n in Enumerable.Range(1, count) select n.ToString());
+        }
+
+        Tree<Student> GetTree(IEnumerable<Student> students)
         {
             Tree<Student> tree = new Tree<Student>();
-            foreach (string value in values)
-                tree.Add(new Student(value));
+            foreach (Student student in students)
+                tree.Add(student);
 
             return tree;
         }
 
-        public static string CalculateMD5Hash(string input)
+        IEnumerable<Student> GetStudentList(IEnumerable<string> values)
+        {
+            var students = new List<Student>();
+            foreach (string value in values)
+                students.Add(new Student(value));
+
+            return students;
+        }
+
+        IEnumerable<string> RandomizePredictably(IEnumerable<string> values)
+        {
+            var src = new List<Tuple<string, string>>();
+
+            foreach (string value in values)
+                src.Add(new Tuple<string, string>(value, CalculateMD5Hash(value)));
+
+            return from value in src orderby value.Item2 select value.Item1;
+        }
+
+        static string CalculateMD5Hash(string input)
         {
             var md5 = MD5.Create();
             byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);

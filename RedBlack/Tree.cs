@@ -10,12 +10,38 @@ namespace RedBlack
 
         public void Add(T obj)
         {
-            if (Root != null)
-                Root.Add(obj);
+            var node = new Node<T>(this, obj);
+
+            if (Root == null)
+                Root = node;
             else
-                Root = new Node<T>(this, obj);
+                Root.Add(node);
 
             Root.Red = false;
+        }
+
+        public T Find(string key)
+        {
+            if (Root == null)
+                return default(T);
+
+            Node<T> node = Root.Find(key);
+
+            if (node != null)
+                return node.Object;
+
+            return default(T);
+        }
+
+        public void Remove(string key)
+        {
+            if (Root == null)
+                return;
+
+            Node<T> node = Root.Find(key);
+
+            if (node != null)
+                node.Remove();
         }
 
         public T GetTop()
@@ -28,8 +54,27 @@ namespace RedBlack
 
         public IEnumerator<T> GetEnumerator()
         {
-            foreach (Node<T> t in Root.GetMyselfAndDescendants())
+            foreach (Node<T> t in GetNodes())
                 yield return t.Object;
+        }
+
+        public string GetDotCode()
+        {
+            var lines = new List<string>();
+
+            lines.Add("digraph BST {");
+            Root.GetDotCode(ref lines);
+            lines.Add("}");
+
+            string dot = String.Join("\r\n", lines);
+
+            return dot;
+        }
+
+        public void PrintAllItems()
+        {
+            foreach (T t in this)
+                Console.WriteLine(t.GetObjectStorageKey());
         }
 
         internal Node<T> GetRootNode()
@@ -45,19 +90,6 @@ namespace RedBlack
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
-        }
-
-        public string GetDotCode()
-        {
-            var lines = new List<string>();
-
-            lines.Add("digraph BST {");
-            Root.GetDotCode(ref lines);
-            lines.Add("}");
-
-            string dot = String.Join(" ", lines);
-
-            return dot;
         }
     }
 }

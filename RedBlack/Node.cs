@@ -1,33 +1,30 @@
 ﻿using System;
-using RedBlack;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace RedBlack
 {
     internal class Node<T> : IComparable where T : ITreeObject
     {
+        public static int LEFT = 0;
+        public static int RIGHT = 1;
+        Node<T>[] children = new Node<T>[2];
         public bool Red = true;
-        public Tree<T> Tree { get; set; }
+        Tree<T> Tree { get; set; }
+        string Key { get { return Object.GetObjectStorageKey(); } }
         public T Object { get; set; }
-        internal string Key { get { return Object.GetObjectStorageKey(); } }
-        internal Node<T> Parent { get; set; }
-        internal Node<T>[] children = new Node<T>[2];
-        internal Node<T> Left { get { return children[0]; } set { children[0] = value; } }
-        internal Node<T> Right { get { return children[1]; } set { children[1] = value; } }
-        internal Node<T> Sibling
+        public Node<T> Parent { get; set; }
+        public Node<T> Left { get { return children[LEFT]; } set { children[LEFT] = value; } }
+        public Node<T> Right { get { return children[RIGHT]; } set { children[RIGHT] = value; } }
+        public Node<T> Sibling
         {
             get
             {
                 if (Parent == null)
                     return null;
-                if (this == Parent.children[0])
-                    return Parent.children[1];
-                else
-                    return Parent.children[0];
+                return Parent.GetChild(1 - ChildDirection);
             } 
         }
-        internal Node<T> GrandParent
+        public Node<T> GrandParent
         {
             get
             {
@@ -36,7 +33,7 @@ namespace RedBlack
                 return Parent.Parent;
             } 
         }
-        internal Node<T> Uncle
+        public Node<T> Uncle
         {
             get
             {
@@ -46,155 +43,195 @@ namespace RedBlack
             } 
         }
 
-        internal int ChildDirection
+        public int ChildDirection
         {
             get
             {
                 if (Parent == null)
                     throw new NullReferenceException();
-
-                return this == Parent.children[0] ? 0 : 1;
+                return this == Parent.Left ? LEFT : RIGHT;
             }
         }
 
-        public Node(Tree<T> tree, T obj, Node<T> parent = null)
+        public Node(Tree<T> tree, T obj)
         {
-            Tree   = tree;
+            Tree = tree;
             Object = obj;
-            Parent = parent;
         }
 
-        public void Add(T obj)
+        public Node<T> GetChild(int dir)
         {
-            int result = Key.CompareTo(obj.GetObjectStorageKey());
+            return children[dir];
+        }
+
+        public void Add(Node<T> node)
+        {
+            int result = CompareTo(node);
 
             if (result == 0)
                 return;
 
-            int dir = result == 1 ? 0 : 1;
-            int otherDir = 1 - dir;
-            Node<T> child = children[dir];
+            int dir = result == 1 ? LEFT : RIGHT;
+            Node<T> child = GetChild(dir);
 
             if (child != null)
             {
-                child.Add(obj);
+                child.Add(node);
                 return;
             }
 
-            var node = new Node<T>(Tree, obj);
             SetChild(dir, node);
 
             node.FixInsert();
         }
 
-        /// <summary>
-        /// Called from inserted node or equivalent place in the macro structure
-        /// </summary>
-        public void FixInsert()
+        public Node<T> Find(string key)
         {
-            if (Parent == null || !Parent.Red)
+            int result = Key.CompareTo(key);
+
+            if (result == 0)
+                return this;
+
+            int dir = result == 1 ? LEFT : RIGHT;
+            Node<T> child = GetChild(dir);
+
+            if (child != null)
+                return child.Find(key);
+
+            return null;
+        }
+
+        public void Remove()
+        {
+            if (Left != null && Right != null)
+            {
+                Node<T> replacement = Right.GetLeast();
+                Object = replacement.Object;
+                replacement.Remove();
                 return;
-
-            // Case 3: Uncle is red so balance by setting colors and checking grandparent
-            if (Uncle != null && Uncle.Red)
-            {
-                Parent.Red      = false;
-                Uncle.Red       = false;
-                GrandParent.Red = true;
-
-                GrandParent.FixInsert();
             }
 
-            // Case 4: Uncle is black (null is black) so we need to rotate
-            else
-            {
-                Node<T> lowest = this;
-
-                if (ChildDirection == 1 && Parent.ChildDirection == 0)
-                {
-                    Parent.Rotate(0);
-                    lowest = Left;
-                }
-                else if (ChildDirection == 0 && Parent.ChildDirection == 1)
-                {
-                    Parent.Rotate(1);
-                    lowest = Right;
-                }
-
-                lowest.Parent.Red      = false;
-                lowest.GrandParent.Red = true;
-
-                lowest.GrandParent.Rotate(1 - lowest.ChildDirection);
-            }
-        }
-
-        /// <summary>
-        /// Called from parent of inserted node or equivalent place in the macro structure
-        /// </summary>
-        /// <param name="dir"></param>
-        public void Rotate(int dir)
-        {
-            int otherDir       = 1 - dir;
-            Node<T> newMe      = children[otherDir];
-            Node<T> parent     = Parent;
-            Node<T> newMeChild = newMe.children[dir];
-
-            int childDirection = 0;
-            if (parent != null)
-                childDirection = this.ChildDirection;
-
-            this.Disconnect();
-            newMe.Disconnect();
-
-            if (newMeChild != null)
-                newMeChild.Disconnect();
-
-            this.SetChild(otherDir, newMeChild);
+            int childDirection = (Parent != null) ? ChildDirection : -1;
+            Node<T> parent = Parent;
+            Node<T> newMe = Left != null ? Left : Right;
 
             if (parent != null)
-                parent.SetChild(childDirection, newMe);
+                DisconnectFromParent();
             else
+                Tree.Root = null;
+
+            if (newMe != null)
             {
-                newMe.Parent = null;
-                Tree.Root = newMe;
+                newMe.DisconnectFromParent();
+                if (parent != null)
+                    parent.SetChild(childDirection, newMe);
             }
 
-            newMe.SetChild(dir, this);
+            if (!Red)
+            {
+                if (newMe != null && newMe.Red)
+                    newMe.Red = false;
+                else if (newMe == null || !newMe.Red)
+                    newMe.RemoveCase1();
+            }
         }
 
-        public Node<T> Disconnect()
+        void RemoveCase1()
         {
-            if (this.Parent != null)
-                this.Parent.children[ChildDirection] = null;
-
-            this.Parent = null;
-
-            return this;
+            if (Parent != null)
+                RemoveCase2();
         }
 
-        public Node<T> SetChild(int dir, Node<T> node)
+        void RemoveCase2()
         {
-            // Set node's previous parent's child node to null
-            if (node != null && node.Parent != null)
-                throw new Exception("This node already has a parent");
+            if (Sibling.Red)
+            {
+                Parent.Red = true;
+                Sibling.Red = false;
+                Rotate(ChildDirection);
+            }
 
-            children[dir] = node;
-            if (node != null)
-                node.Parent = this;
+            RemoveCase3();
+        }
 
-            return this;
+        void RemoveCase3()
+        {
+            if (!Parent.Red && !Sibling.Red && !Sibling.Left.Red && !Sibling.Right.Red)
+            {
+                Sibling.Red = true;
+                Parent.RemoveCase1();
+            }
+            else
+                RemoveCase4();
+        }
+
+        void RemoveCase4()
+        {
+            if (Parent.Red && !Sibling.Red && !Sibling.Left.Red && !Sibling.Right.Red)
+            {
+                Sibling.Red = true;
+                Parent.Red = false;
+            }
+            else
+                RemoveCase5();
+        }
+
+        void RemoveCase5()
+        {
+            if (!Sibling.Red)
+            {
+                int dir = ChildDirection;
+                int otherDir = 1 - dir;
+
+                if (!Sibling.GetChild(otherDir).Red && Sibling.GetChild(dir).Red)
+                {
+                    Sibling.Red = true;
+                    Sibling.GetChild(dir).Red = false;
+                    Rotate(otherDir);
+                }
+            }
+
+            RemoveCase6();
+        }
+
+        void RemoveCase6()
+        {
+            Sibling.Red = Parent.Red;
+            Parent.Red = false;
+
+            int dir = ChildDirection;
+            int otherDir = 1 - dir;
+
+            Sibling.GetChild(otherDir).Red = false;
+            Parent.Rotate(dir);
+        }
+
+        Node<T> GetLeast()
+        {
+            if (Left == null)
+                return this;
+
+            return Left.GetLeast();
+        }
+
+        Node<T> GetGreatest()
+        {
+            if (Right == null)
+                return this;
+
+            return Right.GetGreatest();
         }
 
         public List<Node<T>> GetMyselfAndAncestors()
         {
-            var ancestors = new List<Node<T>>();
+            var nodes = new List<Node<T>>();
 
-            ancestors.Add(this);
+            nodes.Add(this);
 
             if (Parent != null)
-                ancestors.AddRange(Parent.GetMyselfAndAncestors());
+                nodes.AddRange(Parent.GetMyselfAndAncestors());
 
-            return ancestors;
+            return nodes;
         }
 
         public List<Node<T>> GetMyselfAndDescendants()
@@ -210,12 +247,6 @@ namespace RedBlack
                 nodes.AddRange(Right.GetMyselfAndDescendants());
 
             return nodes;
-        }
-
-        public IEnumerable<Node<T>> Traverse()
-        {
-            foreach (Node<T> node in GetMyselfAndDescendants())
-                yield return node;
         }
 
         public int CompareTo(object obj)
@@ -236,12 +267,12 @@ namespace RedBlack
             string color = Red ? "red" : "black";
             lines.Add(String.Format("    {0} [color=\"{1}\" fontcolor=\"{2}\"];", Key, color, color));
 
-            foreach (int dir in new[]{0, 1})
+            foreach (int dir in new[]{LEFT, RIGHT})
             {
-                if (children[dir] != null)
+                if (GetChild(dir) != null)
                 {
-                    lines.Add(String.Format("    {0} -> {1};", Key, children[dir].Key));
-                    children[dir].GetDotCode(ref lines);
+                    lines.Add(String.Format("    {0} -> {1};", Key, GetChild(dir).Key));
+                    GetChild(dir).GetDotCode(ref lines);
                 }
                 else
                 {
@@ -251,6 +282,101 @@ namespace RedBlack
                     lines.Add(String.Format("    {0} -> null{1};", Key, n));
                 }
             }
+        }
+
+        void FixInsert()
+        {
+            if (Parent == null || !Parent.Red)
+                return;
+
+            if (Uncle != null && Uncle.Red)
+            {
+                Parent.Red      = false;
+                Uncle.Red       = false;
+                GrandParent.Red = true;
+
+                GrandParent.FixInsert();
+            }
+            else
+                DoFirstRotation().DoSecondRotation();
+        }
+
+        /// <summary>
+        /// Called from lowest of the three involved nodes
+        /// </summary>
+        /// <returns></returns>
+        Node<T> DoFirstRotation()
+        {
+            if (ChildDirection == RIGHT && Parent.ChildDirection == LEFT)
+            {
+                Parent.Rotate(LEFT);
+                return Left;
+            }
+
+            if (ChildDirection == LEFT && Parent.ChildDirection == RIGHT)
+            {
+                Parent.Rotate(RIGHT);
+                return Right;
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Called from lowest of the three involved nodes
+        /// </summary>
+        void DoSecondRotation()
+        {
+            Parent.Red = false;
+            GrandParent.Red = true;
+
+            GrandParent.Rotate(1 - ChildDirection);
+        }
+
+        /// <summary>
+        /// Called from node to be usurped
+        /// </summary>
+        /// <param name="dir"></param>
+        void Rotate(int dir)
+        {
+            int otherDir = 1 - dir;
+            int childDirection = (Parent != null) ? ChildDirection : -1;
+            Node<T> parent = Parent;
+            Node<T> newMe = GetChild(otherDir);
+            Node<T> newMeChild = newMe.GetChild(dir);
+
+            // Disconnect nodes from their parents
+            DisconnectFromParent();
+            newMe.DisconnectFromParent();
+            if (newMeChild != null)
+                newMeChild.DisconnectFromParent();
+
+            // Set children
+            SetChild(otherDir, newMeChild);
+            newMe.SetChild(dir, this);
+            if (parent != null)
+                parent.SetChild(childDirection, newMe);
+            else
+                Tree.Root = newMe;
+        }
+
+        void DisconnectFromParent()
+        {
+            if (Parent != null)
+                Parent.children[ChildDirection] = null;
+
+            Parent = null;
+        }
+
+        void SetChild(int dir, Node<T> node)
+        {
+            // Set node's previous parent's child node to null
+            if (node != null && node.Parent != null)
+                throw new Exception("This node already has a parent");
+
+            children[dir] = node;
+            if (node != null)
+                node.Parent = this;
         }
     }
 }
