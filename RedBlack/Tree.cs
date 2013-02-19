@@ -64,7 +64,12 @@ namespace RedBlack
             var lines = new List<string>();
 
             lines.Add("digraph BST {");
-            Root.GetDotCode(ref lines);
+
+            if (Root != null)
+                Root.GetDotCode(ref lines);
+            else
+                lines.Add("    null0 [shape=point];");
+
             lines.Add("}");
 
             string dot = String.Join("\r\n", lines);

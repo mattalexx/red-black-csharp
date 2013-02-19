@@ -126,6 +126,27 @@ namespace RedBlackTest
             }
         }
 
+        [Test]
+        public void TestRemoval()
+        {
+            IEnumerable<string> values = new[] { "6", "19", "9", "11", "18", "17", "7", "15", "4", "14", "12", "1", "13", "16", "2", "8", "10", "5", "3" };
+            IEnumerable<string> removeKeys = new[] { "6", "19", "9", "11", "18", "17", "7", "15", "4", "14", "12", "1", "13", "16", "2", "8", "10", "5", "3" };
+            IEnumerable<Student> students = GetStudentList(values);
+            Tree<Student> tree = GetTree(students);
+            List<string> expected = (from value in values orderby value select value).Distinct().ToList();
+            List<string> treeList;
+
+            foreach (string removeKey in removeKeys)
+            {
+                tree.Remove(removeKey);
+
+                expected = expected.Where(value => value != removeKey).ToList();
+                treeList = (from student in tree select student.GetObjectStorageKey()).ToList();
+
+                Assert.AreEqual(expected, treeList);
+            }
+        }
+
         List<IEnumerable<string>> GetLists()
         {
             var lists = new List<IEnumerable<string>>();
