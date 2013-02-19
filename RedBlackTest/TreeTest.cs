@@ -107,7 +107,6 @@ namespace RedBlackTest
 
         [Test]
         [TestCaseSource("GetLists")]
-        [Ignore("Removal's not working yet")]
         public void TestRemoval(IEnumerable<string> values)
         {
             IEnumerable<Student> students = GetStudentList(values);
@@ -165,7 +164,7 @@ namespace RedBlackTest
 
         IEnumerable<string> GetBigList(int count)
         {
-            return (from n in Enumerable.Range(1, count) select n.ToString());
+        return RandomizePredictably(from n in Enumerable.Range(1, count) select n.ToString());
         }
 
         Tree<Student> GetTree(IEnumerable<Student> students)

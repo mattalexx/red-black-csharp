@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -84,6 +85,9 @@ namespace RedBlack
 
         internal IEnumerable<Node<T>> GetNodes()
         {
+            if (Root == null)
+                return Enumerable.Empty<Node<T>>();
+
             return Root.GetMyselfAndDescendants();
         }
 
