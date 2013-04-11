@@ -1,10 +1,10 @@
-﻿using System;
+﻿using NUnit.Framework;
+using RedBlack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using NUnit.Framework;
-using RedBlack;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace RedBlackTest
 {
@@ -15,11 +15,9 @@ namespace RedBlackTest
         [TestCaseSource("GetTrees")]
         public void TestOrdering(Tree<Student> tree)
         {
-            IEnumerable<Node<Student>> nodes =
-                from node in tree.GetNodes()
-                where (node.Left != null && node.CompareTo(node.Left.GetMyselfAndDescendants().Max()) != 1)
-                    || (node.Right != null && node.CompareTo(node.Right.GetMyselfAndDescendants().Min()) != -1)
-                select node;
+            IEnumerable<Node<Student>> nodes = tree.GetNodes()
+                .Where(node => (node.Left != null && node.CompareTo(node.Left.GetMyselfAndDescendants().Max()) != 1)
+                    || (node.Right != null && node.CompareTo(node.Right.GetMyselfAndDescendants().Min()) != -1));
 
             Assert.IsEmpty(nodes, "Nodes left of a node should be lesser and nodes right of a node should be greater");
         }
@@ -45,10 +43,8 @@ namespace RedBlackTest
         [TestCaseSource("GetTrees")]
         public void TestNoRedChildrenOnRedNodes(Tree<Student> tree)
         {
-            IEnumerable<Node<Student>> nodes = 
-                from node in tree.GetNodes()
-                where node.Red && ((node.Left != null && node.Left.Red) || (node.Right != null && node.Right.Red))
-                select node;
+            IEnumerable<Node<Student>> nodes = tree.GetNodes()
+                .Where(node => node.Red && ((node.Left != null && node.Left.Red) || (node.Right != null && node.Right.Red)));
 
             Assert.IsEmpty(nodes, "Red nodes cannot have red children");
         }
@@ -57,12 +53,12 @@ namespace RedBlackTest
         [TestCaseSource("GetTrees")]
         public void TestBlackDepthOfLeaves(Tree<Student> tree)
         {
-            IEnumerable<int> depths =
-                from node in tree.GetNodes()
-                where node.Left == null || node.Right == null
-                select node.GetMyselfAndAncestors().Where(n => !n.Red).Count();
+            IEnumerable<int> depths = tree.GetNodes()
+                .Where(node => node.Left == null || node.Right == null)
+                .Select(node => node.GetMyselfAndAncestors().Where(n => !n.Red).Count());
 
             Assert.NotNull(depths);
+
             int distinctDepthCount = depths.Distinct().Count();
 
             Assert.AreEqual(1, distinctDepthCount, "Every leaf must have the same black depth");
@@ -74,8 +70,8 @@ namespace RedBlackTest
         {
             Tree<Student> tree = GetTree(GetStudentList(values));
 
-            List<string> result = (from student in tree select student.GetObjectStorageKey()).ToList();
-            List<string> expected = (from name in values orderby name select name).Distinct().ToList();
+            List<string> result = tree.Select(student => student.GetObjectStorageKey()).ToList();
+            List<string> expected = values.OrderBy(name => name).Distinct().ToList();
 
             Assert.AreEqual(expected, result);
         }
@@ -111,8 +107,8 @@ namespace RedBlackTest
         {
             IEnumerable<Student> students = GetStudentList(values);
             Tree<Student> tree = GetTree(students);
-            List<string> expected = (from value in values orderby value select value).Distinct().ToList();
-            List<string> removeKeys = RandomizePredictably(expected).ToList();
+            List<string> expected = values.OrderBy(value => value).Distinct().ToList();
+            List<string> removeKeys = ShufflePredictably(expected).ToList();
             List<string> treeList;
 
             foreach (string removeKey in removeKeys)
@@ -120,7 +116,7 @@ namespace RedBlackTest
                 tree.Remove(removeKey);
 
                 expected = expected.Where(value => value != removeKey).ToList();
-                treeList = (from student in tree select student.GetObjectStorageKey()).ToList();
+                treeList = tree.Select(student => student.GetObjectStorageKey()).ToList();
 
                 Assert.AreEqual(expected, treeList);
             }
@@ -133,7 +129,7 @@ namespace RedBlackTest
             IEnumerable<string> removeKeys = new[] { "6", "19", "9", "11", "18", "17", "7", "15", "4", "14", "12", "1", "13", "16", "2", "8", "10", "5", "3" };
             IEnumerable<Student> students = GetStudentList(values);
             Tree<Student> tree = GetTree(students);
-            List<string> expected = (from value in values orderby value select value).Distinct().ToList();
+            List<string> expected = values.OrderBy(value => value).Distinct().ToList();
             List<string> treeList;
 
             foreach (string removeKey in removeKeys)
@@ -141,7 +137,7 @@ namespace RedBlackTest
                 tree.Remove(removeKey);
 
                 expected = expected.Where(value => value != removeKey).ToList();
-                treeList = (from student in tree select student.GetObjectStorageKey()).ToList();
+                treeList = tree.Select(student => student.GetObjectStorageKey()).ToList();
 
                 Assert.AreEqual(expected, treeList);
             }
@@ -185,7 +181,7 @@ namespace RedBlackTest
 
         IEnumerable<string> GetBigList(int count)
         {
-        return RandomizePredictably(from n in Enumerable.Range(1, count) select n.ToString());
+            return ShufflePredictably(Enumerable.Range(1, count).Select(n => n.ToString()));
         }
 
         Tree<Student> GetTree(IEnumerable<Student> students)
@@ -206,20 +202,20 @@ namespace RedBlackTest
             return students;
         }
 
-        IEnumerable<string> RandomizePredictably(IEnumerable<string> values)
+        IEnumerable<string> ShufflePredictably(IEnumerable<string> values)
         {
             var src = new List<Tuple<string, string>>();
 
             foreach (string value in values)
                 src.Add(new Tuple<string, string>(value, CalculateMD5Hash(value)));
 
-            return from value in src orderby value.Item2 select value.Item1;
+            return src.OrderBy(value => value.Item2).Select(value => value.Item1);
         }
 
         static string CalculateMD5Hash(string input)
         {
             var md5 = MD5.Create();
-            byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
+            byte[] inputBytes = Encoding.ASCII.GetBytes(input);
             byte[] hash = md5.ComputeHash(inputBytes);
 
             StringBuilder sb = new StringBuilder();
