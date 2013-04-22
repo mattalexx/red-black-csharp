@@ -412,7 +412,6 @@ namespace RedBlack
             }
             if (child.Right != null && child.Right.Color == RED)
                 FixDoubleRed(child.Right);
-
         }
 
         void FixDoubleRed(Node<T> child)
@@ -490,13 +489,9 @@ namespace RedBlack
             n3.Color = BLACK;
 
             if (n2 == Tree.Root)
-            {
                 Tree.Root.Color = BLACK;
-            }
             else if (n2.Color == RED && n2.Parent.Color == RED)
-            {
                 FixDoubleRed(n2);
-            }
         }
 
         Node<T> GetLeast()
