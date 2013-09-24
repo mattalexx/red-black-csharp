@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RedBlack
 {
@@ -18,7 +18,7 @@ namespace RedBlack
             else
                 Root.Add(node);
 
-            Root.Red = false;
+            Root.IsRed = false;
         }
 
         public T Find(string key)
@@ -47,23 +47,17 @@ namespace RedBlack
 
         public T GetTop()
         {
-            if (Root != null)
-                return Root.Object;
-
-            return default(T);
+            return Root != null ? Root.Object : default(T);
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            foreach (Node<T> t in GetNodes())
-                yield return t.Object;
+            return GetNodes().Select(t => t.Object).GetEnumerator();
         }
 
         public string GetDotCode()
         {
-            var lines = new List<string>();
-
-            lines.Add("digraph BST {");
+            var lines = new List<string> {"digraph BST {"};
 
             if (Root != null)
                 Root.GetDotCode(ref lines);
@@ -90,10 +84,7 @@ namespace RedBlack
 
         internal IEnumerable<Node<T>> GetNodes()
         {
-            if (Root == null)
-                return Enumerable.Empty<Node<T>>();
-
-            return Root.GetMyselfAndDescendants();
+            return Root == null ? Enumerable.Empty<Node<T>>() : Root.GetMyselfAndDescendants();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

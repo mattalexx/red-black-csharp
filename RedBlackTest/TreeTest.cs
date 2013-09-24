@@ -16,8 +16,8 @@ namespace RedBlackTest
         public void TestOrdering(Tree<Student> tree)
         {
             IEnumerable<Node<Student>> nodes = tree.GetNodes()
-                .Where(node => (node.Left != null && node.CompareTo(node.Left.GetMyselfAndDescendants().Max()) != 1)
-                    || (node.Right != null && node.CompareTo(node.Right.GetMyselfAndDescendants().Min()) != -1));
+                .Where(node => (node.LeftNode != null && node.CompareTo(node.LeftNode.GetMyselfAndDescendants().Max()) != 1)
+                    || (node.RightNode != null && node.CompareTo(node.RightNode.GetMyselfAndDescendants().Min()) != -1));
 
             Assert.IsEmpty(nodes, "Nodes left of a node should be lesser and nodes right of a node should be greater");
         }
@@ -36,7 +36,7 @@ namespace RedBlackTest
         [TestCaseSource("GetTrees")]
         public void TestRootBlack(Tree<Student> tree)
         {
-            Assert.False(tree.GetRootNode().Red, "Root node must be black");
+            Assert.False(tree.GetRootNode().IsRed, "Root node must be black");
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace RedBlackTest
         public void TestNoRedChildrenOnRedNodes(Tree<Student> tree)
         {
             IEnumerable<Node<Student>> nodes = tree.GetNodes()
-                .Where(node => node.Red && ((node.Left != null && node.Left.Red) || (node.Right != null && node.Right.Red)));
+                .Where(node => node.IsRed && ((node.LeftNode != null && node.LeftNode.IsRed) || (node.RightNode != null && node.RightNode.IsRed)));
 
             Assert.IsEmpty(nodes, "Red nodes cannot have red children");
         }
@@ -54,8 +54,8 @@ namespace RedBlackTest
         public void TestBlackDepthOfLeaves(Tree<Student> tree)
         {
             IEnumerable<int> depths = tree.GetNodes()
-                .Where(node => node.Left == null || node.Right == null)
-                .Select(node => node.GetMyselfAndAncestors().Where(n => !n.Red).Count());
+                .Where(node => node.LeftNode == null || node.RightNode == null)
+                .Select(node => node.GetMyselfAndAncestors().Count(n => !n.IsRed));
 
             Assert.NotNull(depths);
 
@@ -105,18 +105,18 @@ namespace RedBlackTest
         [TestCaseSource("GetLists")]
         public void TestRemoval(IEnumerable<string> values)
         {
-            IEnumerable<Student> students = GetStudentList(values);
+            var valuesList = values as IList<string> ?? values.ToList();
+            IEnumerable<Student> students = GetStudentList(valuesList);
             Tree<Student> tree = GetTree(students);
-            List<string> expected = values.OrderBy(value => value).Distinct().ToList();
+            List<string> expected = valuesList.OrderBy(value => value).Distinct().ToList();
             List<string> removeKeys = ShufflePredictably(expected).ToList();
-            List<string> treeList;
 
             foreach (string removeKey in removeKeys)
             {
                 tree.Remove(removeKey);
 
                 expected = expected.Where(value => value != removeKey).ToList();
-                treeList = tree.Select(student => student.GetObjectStorageKey()).ToList();
+                List<string> treeList = tree.Select(student => student.GetObjectStorageKey()).ToList();
 
                 Assert.AreEqual(expected, treeList);
             }
@@ -130,14 +130,13 @@ namespace RedBlackTest
             IEnumerable<Student> students = GetStudentList(values);
             Tree<Student> tree = GetTree(students);
             List<string> expected = values.OrderBy(value => value).Distinct().ToList();
-            List<string> treeList;
 
             foreach (string removeKey in removeKeys)
             {
                 tree.Remove(removeKey);
 
                 expected = expected.Where(value => value != removeKey).ToList();
-                treeList = tree.Select(student => student.GetObjectStorageKey()).ToList();
+                List<string> treeList = tree.Select(student => student.GetObjectStorageKey()).ToList();
 
                 Assert.AreEqual(expected, treeList);
             }
@@ -145,35 +144,28 @@ namespace RedBlackTest
 
         List<IEnumerable<string>> GetLists()
         {
-            var lists = new List<IEnumerable<string>>();
-
-            lists.Add(new[]{ "John", "Marie", "Xavier", "Adam", "Betty" });
-            lists.Add(new[]{ "04", "01", "03", "02", "06", "05" });
-            lists.Add(new[]{ "C", "A", "B" });
-            lists.Add(new[]{ "363", "168", "610", "381", "236", "348", "833" });
-            lists.Add(new[]{ "08", "07", "06", "05", "04", "03", "02", "01" });
-            lists.Add(GetBigList(1000));
+            var lists = new List<IEnumerable<string>>
+            {
+                new[] {"John", "Marie", "Xavier", "Adam", "Betty"},
+                new[] {"04", "01", "03", "02", "06", "05"},
+                new[] {"C", "A", "B"},
+                new[] {"363", "168", "610", "381", "236", "348", "833"},
+                new[] {"08", "07", "06", "05", "04", "03", "02", "01"},
+                GetBigList(1000)
+            };
 
             return lists;
         }
 
         IEnumerable<Tree<Student>> GetTrees()
         {
-            var trees = new List<Tree<Student>>();
-
-            foreach (IEnumerable<string> list in GetLists())
-                trees.Add(GetTree(GetStudentList(list)));
-
-            return trees;
+            return GetLists().Select(list => GetTree(GetStudentList(list))).ToList();
         }
 
         void TestNodeLinks(Node<Student> node)
         {
-            foreach (int dir in new[] { 0, 1 })
+            foreach (int dir in new[] { 0, 1 }.Where(dir => node.GetChild(dir) != null))
             {
-                if (node.GetChild(dir) == null)
-                    continue;
-
                 Assert.AreSame(node, node.GetChild(dir).Parent);
                 TestNodeLinks(node.GetChild(dir));
             }
@@ -186,7 +178,7 @@ namespace RedBlackTest
 
         Tree<Student> GetTree(IEnumerable<Student> students)
         {
-            Tree<Student> tree = new Tree<Student>();
+            var tree = new Tree<Student>();
             foreach (Student student in students)
                 tree.Add(student);
 
@@ -195,19 +187,12 @@ namespace RedBlackTest
 
         IEnumerable<Student> GetStudentList(IEnumerable<string> values)
         {
-            var students = new List<Student>();
-            foreach (string value in values)
-                students.Add(new Student(value));
-
-            return students;
+            return values.Select(value => new Student(value)).ToList();
         }
 
         IEnumerable<string> ShufflePredictably(IEnumerable<string> values)
         {
-            var src = new List<Tuple<string, string>>();
-
-            foreach (string value in values)
-                src.Add(new Tuple<string, string>(value, CalculateMD5Hash(value)));
+            var src = values.Select(value => new Tuple<string, string>(value, CalculateMD5Hash(value))).ToList();
 
             return src.OrderBy(value => value.Item2).Select(value => value.Item1);
         }
@@ -218,7 +203,7 @@ namespace RedBlackTest
             byte[] inputBytes = Encoding.ASCII.GetBytes(input);
             byte[] hash = md5.ComputeHash(inputBytes);
 
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             for (int i = 0; i < hash.Length; i++)
                 sb.Append(hash[i].ToString("X2"));
 

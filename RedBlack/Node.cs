@@ -5,23 +5,23 @@ namespace RedBlack
 {
     internal class Node<T> : IComparable where T : ITreeObject
     {
-        public static int LEFT = 0;
-        public static int RIGHT = 1;
-        public static int RED = 0;
-        public static int BLACK = 1;
-        public static int NRED = -1;
-        public static int DBLACK = 2;
-        Node<T>[] children = new Node<T>[2];
-        public int color = RED;
-        public bool Red
+        const int Left = 0;
+        const int Right = 1;
+        const int Red = 0;
+        const int Black = 1;
+        const int Nred = -1;
+        const int Dblack = 2;
+        readonly Node<T>[] _children = new Node<T>[2];
+        int _color = Red;
+        public bool IsRed
         {
-            get { return color == RED; }
-            set { color = value ? RED : BLACK; }
+            get { return _color == Red; }
+            set { _color = value ? Red : Black; }
         }
         public int Color
         {
-            get { return color; }
-            set { color = value; }
+            get { return _color; }
+            set { _color = value; }
         }
         Tree<T> Tree { get; set; }
         string Key
@@ -30,42 +30,36 @@ namespace RedBlack
         }
         public T Object { get; set; }
         public Node<T> Parent { get; set; }
-        public Node<T> Left
+        public Node<T> LeftNode
         {
-            get { return children[LEFT]; }
-            set { children[LEFT] = value; }
+            get { return _children[Left]; }
+            set { _children[Left] = value; }
         }
-        public Node<T> Right
+        public Node<T> RightNode
         {
-            get { return children[RIGHT]; }
-            set { children[RIGHT] = value; }
+            get { return _children[Right]; }
+            set { _children[Right] = value; }
         }
         public Node<T> Sibling
         {
             get
             {
-                if (Parent == null)
-                    return null;
-                return Parent.GetChild(1 - ChildDirection);
-            } 
+                return Parent == null ? null : Parent.GetChild(1 - ChildDirection);
+            }
         }
         public Node<T> GrandParent
         {
             get
             {
-                if (Parent == null)
-                    return null;
-                return Parent.Parent;
-            } 
+                return Parent == null ? null : Parent.Parent;
+            }
         }
         public Node<T> Uncle
         {
             get
             {
-                if (Parent == null)
-                    return null;
-                return Parent.Sibling;
-            } 
+                return Parent == null ? null : Parent.Sibling;
+            }
         }
 
         public int ChildDirection
@@ -74,7 +68,7 @@ namespace RedBlack
             {
                 if (Parent == null)
                     throw new NullReferenceException();
-                return this == Parent.Left ? LEFT : RIGHT;
+                return this == Parent.LeftNode ? Left : Right;
             }
         }
 
@@ -86,7 +80,7 @@ namespace RedBlack
 
         public Node<T> GetChild(int dir)
         {
-            return children[dir];
+            return _children[dir];
         }
 
         public void Add(Node<T> node)
@@ -96,7 +90,7 @@ namespace RedBlack
             if (result == 0)
                 return;
 
-            int dir = result == 1 ? LEFT : RIGHT;
+            int dir = result == 1 ? Left : Right;
             Node<T> child = GetChild(dir);
 
             if (child != null)
@@ -117,20 +111,15 @@ namespace RedBlack
             if (result == 0)
                 return this;
 
-            int dir = result == 1 ? LEFT : RIGHT;
+            int dir = result == 1 ? Left : Right;
             Node<T> child = GetChild(dir);
 
-            if (child != null)
-                return child.Find(key);
-
-            return null;
+            return child != null ? child.Find(key) : null;
         }
 
         public List<Node<T>> GetMyselfAndAncestors()
         {
-            var nodes = new List<Node<T>>();
-
-            nodes.Add(this);
+            var nodes = new List<Node<T>> {this};
 
             if (Parent != null)
                 nodes.AddRange(Parent.GetMyselfAndAncestors());
@@ -142,13 +131,13 @@ namespace RedBlack
         {
             var nodes = new List<Node<T>>();
 
-            if (Left != null)
-                nodes.AddRange(Left.GetMyselfAndDescendants());
+            if (LeftNode != null)
+                nodes.AddRange(LeftNode.GetMyselfAndDescendants());
 
             nodes.Add(this);
 
-            if (Right != null)
-                nodes.AddRange(Right.GetMyselfAndDescendants());
+            if (RightNode != null)
+                nodes.AddRange(RightNode.GetMyselfAndDescendants());
 
             return nodes;
         }
@@ -168,10 +157,10 @@ namespace RedBlack
 
         public void GetDotCode(ref List<string> lines)
         {
-            string color = Red ? "red" : "black";
+            string color = IsRed ? "red" : "black";
             lines.Add(String.Format("    {0} [color=\"{1}\" fontcolor=\"{2}\"];", Key, color, color));
 
-            foreach (int dir in new[]{LEFT, RIGHT})
+            foreach (int dir in new[]{Left, Right})
             {
                 if (GetChild(dir) != null)
                 {
@@ -190,14 +179,14 @@ namespace RedBlack
 
         void FixInsert()
         {
-            if (Parent == null || !Parent.Red)
+            if (Parent == null || !Parent.IsRed)
                 return;
 
-            if (Uncle != null && Uncle.Red)
+            if (Uncle != null && Uncle.IsRed)
             {
-                Parent.Red      = false;
-                Uncle.Red       = false;
-                GrandParent.Red = true;
+                Parent.IsRed      = false;
+                Uncle.IsRed       = false;
+                GrandParent.IsRed = true;
 
                 GrandParent.FixInsert();
             }
@@ -211,16 +200,16 @@ namespace RedBlack
         /// <returns></returns>
         Node<T> DoFirstRotation()
         {
-            if (ChildDirection == RIGHT && Parent.ChildDirection == LEFT)
+            if (ChildDirection == Right && Parent.ChildDirection == Left)
             {
-                Parent.Rotate(LEFT);
-                return Left;
+                Parent.Rotate(Left);
+                return LeftNode;
             }
 
-            if (ChildDirection == LEFT && Parent.ChildDirection == RIGHT)
+            if (ChildDirection == Left && Parent.ChildDirection == Right)
             {
-                Parent.Rotate(RIGHT);
-                return Right;
+                Parent.Rotate(Right);
+                return RightNode;
             }
 
             return this;
@@ -231,8 +220,8 @@ namespace RedBlack
         /// </summary>
         void DoSecondRotation()
         {
-            Parent.Red = false;
-            GrandParent.Red = true;
+            Parent.IsRed = false;
+            GrandParent.IsRed = true;
 
             GrandParent.Rotate(1 - ChildDirection);
         }
@@ -266,9 +255,9 @@ namespace RedBlack
 
         public void Remove()
         {
-            if (Left == null || Right == null)
+            if (LeftNode == null || RightNode == null)
             {
-                Node<T> child = Left != null ? Left : Right;
+                Node<T> child = LeftNode ?? RightNode;
 
                 FixRemove(this);
 
@@ -277,23 +266,23 @@ namespace RedBlack
                 return;
             }
 
-            Node<T> next = Right.GetLeast();
+            Node<T> next = RightNode.GetLeast();
             Object = next.Object;
 
             FixRemove(next);
 
-            next.ReplaceWith(next.Right);
+            next.ReplaceWith(next.RightNode);
         }
 
         void FixRemove(Node<T> node)
         {
-            if (node.Red)
+            if (node.IsRed)
                 return;
 
-            if (node.Left != null || node.Right != null)
+            if (node.LeftNode != null || node.RightNode != null)
             {
-                int dir = node.Left == null ? RIGHT : LEFT;
-                node.GetChild(dir).Color = BLACK;
+                int dir = node.LeftNode == null ? Right : Left;
+                node.GetChild(dir).Color = Black;
             }
             else
                 BubbleUp(node.Parent);
@@ -305,53 +294,53 @@ namespace RedBlack
                 return;
 
             parent.Color++;
-            parent.Left.Color--;
-            parent.Right.Color--;
+            parent.LeftNode.Color--;
+            parent.RightNode.Color--;
 
-            Node<T> child = parent.Left;
-            if (child.Color == NRED)
+            Node<T> child = parent.LeftNode;
+            if (child.Color == Nred)
             {
                 FixNegativeRed(child);
                 return;
             }
-            else if (child.Color == RED)
+            if (child.Color == Red)
             {
-                if (child.Left != null && child.Left.Color == RED)
+                if (child.LeftNode != null && child.LeftNode.Color == Red)
                 {
-                    FixDoubleRed(child.Left);
+                    FixDoubleRed(child.LeftNode);
                     return;
                 }
-                if (child.Right != null && child.Right.Color == RED)
+                if (child.RightNode != null && child.RightNode.Color == Red)
                 {
-                    FixDoubleRed(child.Right);
+                    FixDoubleRed(child.RightNode);
                     return;
                 }
             }
 
-            child = parent.Right;
-            if (child.Color == NRED)
+            child = parent.RightNode;
+            if (child.Color == Nred)
             {
                 FixNegativeRed(child);
                 return;
             }
-            else if (child.Color == RED)
+            if (child.Color == Red)
             {
-                if (child.Left != null && child.Left.Color == RED)
+                if (child.LeftNode != null && child.LeftNode.Color == Red)
                 {
-                    FixDoubleRed(child.Left);
+                    FixDoubleRed(child.LeftNode);
                     return;
                 }
-                if (child.Right != null && child.Right.Color == RED)
+                if (child.RightNode != null && child.RightNode.Color == Red)
                 {
-                    FixDoubleRed(child.Right);
+                    FixDoubleRed(child.RightNode);
                     return;
                 }
             }
 
-            if (parent.Color == DBLACK)
+            if (parent.Color == Dblack)
             {
                 if (parent.Parent == null)
-                    parent.Color = BLACK;
+                    parent.Color = Black;
                 else
                     BubbleUp(parent.Parent);
             }
@@ -362,56 +351,56 @@ namespace RedBlack
             Node<T> n1, n2, n3, n4, t1, t2, t3, child;
             Node<T> parent = negRed.Parent;
 
-            if (parent.Left == negRed)
+            if (parent.LeftNode == negRed)
             {
-                n1 = negRed.Left;
+                n1 = negRed.LeftNode;
                 n2 = negRed;
-                n3 = negRed.Right;
+                n3 = negRed.RightNode;
                 n4 = parent;
-                t1 = n3.Left;
-                t2 = n3.Right;
-                t3 = n4.Right;
-                n1.Color = RED;
-                n2.Color = BLACK;
-                n4.Color = BLACK;
-                n2.SetChild(RIGHT, t1);
+                t1 = n3.LeftNode;
+                t2 = n3.RightNode;
+                t3 = n4.RightNode;
+                n1.Color = Red;
+                n2.Color = Black;
+                n4.Color = Black;
+                n2.SetChild(Right, t1);
                 T temp = n4.Object;
                 n4.Object = n3.Object;
                 n3.Object = temp;
-                n3.SetChild(LEFT, t2);
-                n3.SetChild(RIGHT, t3);
-                n4.SetChild(RIGHT, n3);
+                n3.SetChild(Left, t2);
+                n3.SetChild(Right, t3);
+                n4.SetChild(Right, n3);
                 child = n1;
             }
             else
             {
-                n4 = negRed.Right;
+                n4 = negRed.RightNode;
                 n3 = negRed;
-                n2 = negRed.Left;
+                n2 = negRed.LeftNode;
                 n1 = parent;
-                t3 = n2.Right;
-                t2 = n2.Left;
-                t1 = n1.Left;
-                n4.Color = RED;
-                n3.Color = BLACK;
-                n1.Color = BLACK;
-                n3.SetChild(LEFT, t3);
+                t3 = n2.RightNode;
+                t2 = n2.LeftNode;
+                t1 = n1.LeftNode;
+                n4.Color = Red;
+                n3.Color = Black;
+                n1.Color = Black;
+                n3.SetChild(Left, t3);
                 T temp = n1.Object;
                 n1.Object = n2.Object;
                 n2.Object = temp;
-                n2.SetChild(RIGHT, t2);
-                n2.SetChild(LEFT, t1);
-                n1.SetChild(LEFT, n2);
+                n2.SetChild(Right, t2);
+                n2.SetChild(Left, t1);
+                n1.SetChild(Left, n2);
                 child = n4;
             }
 
-            if (child.Left != null && child.Left.Color == RED)
+            if (child.LeftNode != null && child.LeftNode.Color == Red)
             {
-                FixDoubleRed(child.Left);
+                FixDoubleRed(child.LeftNode);
                 return;
             }
-            if (child.Right != null && child.Right.Color == RED)
-                FixDoubleRed(child.Right);
+            if (child.RightNode != null && child.RightNode.Color == Red)
+                FixDoubleRed(child.RightNode);
         }
 
         void FixDoubleRed(Node<T> child)
@@ -421,52 +410,52 @@ namespace RedBlack
 
             if (grandParent == null)
             {
-                parent.Color = BLACK;
+                parent.Color = Black;
                 return;
             }
 
             Node<T> n1, n2, n3, t1, t2, t3, t4;
 
-            if (parent == grandParent.Left)
+            if (parent == grandParent.LeftNode)
             {
                 n3 = grandParent;
-                t4 = grandParent.Right;
-                if (child == parent.Left)
+                t4 = grandParent.RightNode;
+                if (child == parent.LeftNode)
                 {
                     n1 = child;
                     n2 = parent;
-                    t1 = child.Left;
-                    t2 = child.Right;
-                    t3 = parent.Right;
+                    t1 = child.LeftNode;
+                    t2 = child.RightNode;
+                    t3 = parent.RightNode;
                 }
                 else
                 {
                     n1 = parent;
                     n2 = child;
-                    t1 = parent.Left;
-                    t2 = child.Left;
-                    t3 = child.Right;
+                    t1 = parent.LeftNode;
+                    t2 = child.LeftNode;
+                    t3 = child.RightNode;
                 }
             }
             else
             {
                 n1 = grandParent;
-                t1 = grandParent.Left;
-                if (child == parent.Left)
+                t1 = grandParent.LeftNode;
+                if (child == parent.LeftNode)
                 {
                     n2 = child;
                     n3 = parent;
-                    t2 = child.Left;
-                    t3 = child.Right;
-                    t4 = parent.Right;
+                    t2 = child.LeftNode;
+                    t3 = child.RightNode;
+                    t4 = parent.RightNode;
                 }
                 else
                 {
                     n2 = parent;
                     n3 = child;
-                    t2 = parent.Left;
-                    t3 = child.Left;
-                    t4 = child.Right;
+                    t2 = parent.LeftNode;
+                    t3 = child.LeftNode;
+                    t4 = child.RightNode;
                 }
             }
 
@@ -478,36 +467,25 @@ namespace RedBlack
             else
                 grandParent.ReplaceWith(n2);
 
-            n1.SetChild(LEFT, t1);
-            n1.SetChild(RIGHT, t2);
-            n2.SetChild(LEFT, n1);
-            n2.SetChild(RIGHT, n3);
-            n3.SetChild(LEFT, t3);
-            n3.SetChild(RIGHT, t4);
+            n1.SetChild(Left, t1);
+            n1.SetChild(Right, t2);
+            n2.SetChild(Left, n1);
+            n2.SetChild(Right, n3);
+            n3.SetChild(Left, t3);
+            n3.SetChild(Right, t4);
             n2.Color = grandParent.Color - 1;
-            n1.Color = BLACK;
-            n3.Color = BLACK;
+            n1.Color = Black;
+            n3.Color = Black;
 
             if (n2 == Tree.Root)
-                Tree.Root.Color = BLACK;
-            else if (n2.Color == RED && n2.Parent.Color == RED)
+                Tree.Root.Color = Black;
+            else if (n2.Color == Red && n2.Parent.Color == Red)
                 FixDoubleRed(n2);
         }
 
         Node<T> GetLeast()
         {
-            if (Left == null)
-                return this;
-
-            return Left.GetLeast();
-        }
-
-        Node<T> GetGreatest()
-        {
-            if (Right == null)
-                return this;
-
-            return Right.GetGreatest();
+            return LeftNode == null ? this : LeftNode.GetLeast();
         }
 
         void ReplaceWith(Node<T> node)
@@ -533,7 +511,7 @@ namespace RedBlack
         void DisconnectFromParent()
         {
             if (Parent != null)
-                Parent.children[ChildDirection] = null;
+                Parent._children[ChildDirection] = null;
 
             Parent = null;
         }
@@ -543,15 +521,15 @@ namespace RedBlack
             int otherDir = 1 - dir;
 
             // If the passed node exists as the other child, disconnect it from there
-            if (children[otherDir] == node && node != null)
-                children[otherDir].DisconnectFromParent();
+            if (_children[otherDir] == node && node != null)
+                _children[otherDir].DisconnectFromParent();
 
             // If we have a node in the target spot, disconnect it
-            if (children[dir] != null)
-                children[dir].DisconnectFromParent();
+            if (_children[dir] != null)
+                _children[dir].DisconnectFromParent();
 
             // Set the node
-            children[dir] = node;
+            _children[dir] = node;
 
             if (node == null)
                 return;

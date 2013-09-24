@@ -4,16 +4,16 @@ namespace RedBlackTest
 {
     public class Student : ITreeObject
     {
-        private string key;
+        private readonly string _key;
 
         public Student(string key)
         {
-            this.key = key;
+            _key = key;
         }
 
         public string GetObjectStorageKey()
         {
-            return key;
+            return _key;
         }
     }
 }

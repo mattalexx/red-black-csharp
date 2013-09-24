@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace RedBlack
+﻿namespace RedBlack
 {
     public interface ITreeObject
     {
